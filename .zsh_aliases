@@ -1,0 +1,36 @@
+# hopper zsh entrypoint (macOS). Mirror of .bash_aliases for zsh.
+# Hook it up with:  echo 'source ~/hopper/.zsh_aliases' >> ~/.zshrc
+
+# Absolute dir of this file (zsh: %x is the current source file).
+__hopper_dir="${${(%):-%x}:A:h}"
+
+# zsh completion system: put Homebrew's completions (git, brew, ...) on fpath,
+# then initialize compinit. bash gets this from the distro's bash-completion.
+#
+# Also move Homebrew's bin ahead of /usr/bin: /etc/paths.d/homebrew only
+# *appends* it, so path_helper leaves Apple's older git first. That pairs
+# Homebrew's newer completion scripts with Apple's git and breaks completion
+# (e.g. `git help --aliases-for-completion`). typeset -U keeps path deduped.
+if command -v brew >/dev/null 2>&1; then
+    brew_prefix="$(brew --prefix)"
+    typeset -U path
+    path=("$brew_prefix/bin" "$brew_prefix/sbin" $path)
+    fpath=("$brew_prefix/share/zsh/site-functions" $fpath)
+fi
+autoload -Uz compinit && compinit -u
+
+source "$__hopper_dir/lib/compat.sh"
+source "$__hopper_dir/lib/env.sh"
+source "$__hopper_dir/lib/flag.sh"
+source "$__hopper_dir/lib/git-config.sh"
+source "$__hopper_dir/lib/helpers.sh"
+source "$__hopper_dir/lib/emoji.sh"
+source "$__hopper_dir/lib/prompt.sh"
+source "$__hopper_dir/lib/repo-status.sh"
+
+# drop-ins from other repos (~/.config/hopper/conf.d/*.sh)
+source "$__hopper_dir/lib/conf-d.sh"
+
+__hopper_check_repos
+
+export ZELLIJ_CONFIG_DIR="$__hopper_dir/config/zellij"

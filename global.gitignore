@@ -1,0 +1,11 @@
+# registered as core.excludesFile by lib/git-config.sh
+
+*frank.php
+foo.php
+foo.html
+foo.js
+.user.ini
+# /vendor
+.DS_Store
+
+**/.claude/settings.local.json

@@ -1,0 +1,5 @@
+/cache/
+.repo_status_sources
+config/kitty/local.conf
+config/kitty/*.bak
+config/zellij/*.bak

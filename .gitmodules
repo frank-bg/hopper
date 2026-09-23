@@ -1,0 +1,3 @@
+[submodule "modules/posh-git-sh"]
+	path = modules/posh-git-sh
+	url = https://github.com/lyze/posh-git-sh.git

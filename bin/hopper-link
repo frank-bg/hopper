@@ -1,0 +1,53 @@
+#!/bin/bash
+# Manage drop-ins in ~/.config/hopper/conf.d/ (sourced by lib/conf-d.sh).
+#
+#   hopper-link <name> <script>   link <script> as <name>.sh (idempotent)
+#   hopper-link --remove <name>   drop it
+#   hopper-link --list            show drop-ins and where they point
+#   hopper-link --prune           remove dangling links (repo deleted)
+#
+# <name> carries the order: 50-foo runs before 60-bar.
+set -euo pipefail
+
+confd="${XDG_CONFIG_HOME:-$HOME/.config}/hopper/conf.d"
+
+usage() { sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+
+case "${1:-}" in
+--list)
+    [[ -d $confd ]] || exit 0
+    for f in "$confd"/*.sh; do
+        [[ -e $f || -L $f ]] || continue
+        target=$(readlink "$f" || echo "(file)")
+        [[ -e $f ]] || target="$target (dangling)"
+        printf '%s -> %s\n' "$(basename "$f")" "$target"
+    done
+    ;;
+--prune)
+    [[ -d $confd ]] || exit 0
+    for f in "$confd"/*.sh; do
+        if [[ -L $f && ! -e $f ]]; then
+            echo "Removing dangling $f"
+            rm "$f"
+        fi
+    done
+    ;;
+--remove)
+    [[ -n "${2:-}" ]] || usage
+    rm -f "$confd/${2%.sh}.sh"
+    ;;
+-*|'')
+    usage
+    ;;
+*)
+    [[ -n "${2:-}" ]] || usage
+    name="${1%.sh}.sh"
+    script=$(realpath "$2")
+    [[ -f $script ]] || { echo "hopper-link: $2 is not a file" >&2; exit 1; }
+    link="$confd/$name"
+    [[ -L $link && "$(readlink "$link")" == "$script" ]] && exit 0
+    mkdir -p "$confd"
+    echo "Linking $link -> $script"
+    ln -sfn "$script" "$link"
+    ;;
+esac

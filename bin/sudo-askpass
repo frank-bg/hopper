@@ -1,0 +1,15 @@
+#!/bin/bash
+# GUI askpass for `sudo -A`: Claude Code's Bash tool has no TTY, so sudo
+# cannot prompt. The password flows dialog → stdout → sudo, never through
+# the model or shell history. Wired via SUDO_ASKPASS in lib/env.sh.
+PROMPT="${1:-sudo password:}"
+if [[ "$(uname)" == "Darwin" ]]; then
+    # prompt goes through the environment so quotes in it cannot break the AppleScript
+    PROMPT="$PROMPT" exec osascript \
+        -e 'display dialog (system attribute "PROMPT") default answer "" with hidden answer with title "sudo"' \
+        -e 'text returned of result' 2>/dev/null
+fi
+if [[ -n "$DISPLAY" ]] && command -v zenity > /dev/null; then
+    exec zenity --password --title="sudo" --text="$PROMPT" 2>/dev/null
+fi
+exit 1  # headless host: no GUI, let sudo fail instead of hanging

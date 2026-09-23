@@ -1,0 +1,6 @@
+#: Ajustes de kitty propios de este host. Copiar a local.conf (gitignorado).
+#:
+#: El caso que lo motivó: con la misma font_size, macOS se ve pequeño y Linux
+#: enorme. hal-neo usa 14.0; hal-9000 se queda con el valor de kitty.conf.
+
+# font_size 14.0
