@@ -1,7 +1,8 @@
 # shellcheck shell=bash
 # Prompt wiring — cross-shell (bash + zsh).
 # Renders: terminal title (bash), date, user@host, cwd in colors, git status
-# (via posh-git-sh), then a random animal emoji and the prompt char.
+# (via posh-git-sh), then a random emoji (set by hopper.emoji, see
+# lib/emoji.sh) and the prompt char.
 #
 # Requires:
 #   - $__hopper_dir  (set by the entrypoint that sources this file)
@@ -27,7 +28,7 @@ if [ -n "$ZSH_VERSION" ]; then
         # status must never take index.lock and collide with a rebase.
         GIT_OPTIONAL_LOCKS=0 __posh_git_ps1 \
             "$(date)"$'\n'"%F{green}%n@%m %F{yellow}%~ " \
-            " %B%F{blue}"$'\n\n'" $__HOPPER_EMOJI %# %f%b "
+            " %B%F{blue}"$'\n\n'" ${__HOPPER_EMOJI:+$__HOPPER_EMOJI }%# %f%b "
     }
     if autoload -Uz add-zsh-hook 2>/dev/null; then
         add-zsh-hook precmd __HOPPER_PROMPT
@@ -35,6 +36,8 @@ if [ -n "$ZSH_VERSION" ]; then
         precmd_functions+=(__HOPPER_PROMPT)
     fi
 elif [ -n "$BASH_VERSION" ]; then
-    # GIT_OPTIONAL_LOCKS=0 scoped to the call (see the zsh branch above).
-    PROMPT_COMMAND='GIT_OPTIONAL_LOCKS=0 __posh_git_ps1 "$MYPS1\n$(date)\n\\[\[\e[0;32m\]\u@\h \[\e[0;33m\]\w " " \[\e[1;34m\]\n\n $(__HOPPER_RANDOM_EMOJI) \\$\[\e[0m\] ";'
+    # GIT_OPTIONAL_LOCKS=0 scoped to the call (see the zsh branch above). The
+    # emoji is picked first, in the current shell, so an empty one (hopper.emoji
+    # off) leaves no stray space before the prompt char.
+    PROMPT_COMMAND='__HOPPER_RANDOM_EMOJI >/dev/null; GIT_OPTIONAL_LOCKS=0 __posh_git_ps1 "$MYPS1\n$(date)\n\\[\[\e[0;32m\]\u@\h \[\e[0;33m\]\w " " \[\e[1;34m\]\n\n ${__HOPPER_EMOJI:+$__HOPPER_EMOJI }\\$\[\e[0m\] ";'
 fi

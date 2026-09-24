@@ -25,7 +25,8 @@ To update, run `hpull` (it pulls and refreshes the submodule).
 ## What you get
 
 - **Prompt**: date, `user@host`, the cwd, git status via
-  [posh-git-sh](https://github.com/lyze/posh-git-sh), and a random animal emoji. It runs
+  [posh-git-sh](https://github.com/lyze/posh-git-sh), and a random emoji (animals by
+  default, see `hopper.emoji` below). It runs
   with `GIT_OPTIONAL_LOCKS=0`, so it never takes `index.lock` in the middle of a rebase
 - **Git**: the aliases `git lg`, `git s` and `git pfl`, plus a global excludes file
   (`global.gitignore`). A setting is written only when it is unset, so hopper never
@@ -53,6 +54,17 @@ Feature toggles are asked once per host and stored in global git config under
 `hopper.*`. One of them, `hopper.perRepoIdentity`, makes git identity per repo only:
 it sets `user.useConfigOnly` and removes any global `user.*`/`author.*`/`committer.*`
 on every shell start, so a repo without its own identity refuses to commit.
+
+The prompt emoji is set with `hopper.emoji`, which is never asked (unset means
+animals). Name a set (`animals`, `fruits`, `hearts`, `monkeys`, `moons`, `vehicles`,
+`clocks`, `sports`, `books`, `globes`, `faces`), give your own space-separated list, or
+turn it off. It is read when the shell starts, so a change applies to the next one:
+
+```bash
+git config --global hopper.emoji moons
+git config --global hopper.emoji "🦀 🐙 🦑"
+git config --global hopper.emoji off
+```
 
 ## Extending it: drop-ins
 

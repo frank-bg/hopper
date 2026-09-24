@@ -64,11 +64,12 @@ __HOPPER_REPO_STATUS() {
         fi
         # Call directly and read $__HOPPER_EMOJI rather than capturing twice
         # with $(...): in zsh each subshell re-seeds $RANDOM identically, which
-        # would make both emoji runs match. See lib/shell/emoji.sh.
+        # would make both emoji runs match. See lib/emoji.sh. With hopper.emoji
+        # off the emoji is empty and the banner keeps a plain frame.
         (
             cd "$1" || exit
-            __HOPPER_RANDOM_EMOJI 5 >/dev/null; left="$__HOPPER_EMOJI"
-            __HOPPER_RANDOM_EMOJI 5 >/dev/null; right="$__HOPPER_EMOJI"
+            __HOPPER_RANDOM_EMOJI 5 >/dev/null; left="${__HOPPER_EMOJI:-═════}"
+            __HOPPER_RANDOM_EMOJI 5 >/dev/null; right="${__HOPPER_EMOJI:-═════}"
             echo "" && echo "$left $PWD $right" && git status -s -b
         )
         touch "$cache_file"
