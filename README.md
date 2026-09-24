@@ -45,7 +45,7 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   present; per-host settings go in `config/kitty/local.conf`, which is gitignored) and
   zellij (`ZELLIJ_CONFIG_DIR`, with `ez` to attach to the `main` session).
   `install-zellij` installs or updates zellij in `~/.local/bin` from its latest GitHub
-  release (Linux x86_64/aarch64; on macOS use `brew install zellij`)
+  release (Linux x86_64/aarch64, macOS arm64/x86_64)
 - **`sudo -A` without a TTY**: `SUDO_ASKPASS` points to `bin/sudo-askpass`, which
   shows a zenity dialog on Linux or an osascript one on macOS, and fails on headless
   hosts
