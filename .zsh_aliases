@@ -33,4 +33,4 @@ source "$__hopper_dir/lib/conf-d.sh"
 
 __hopper_check_repos
 
-export ZELLIJ_CONFIG_DIR="$__hopper_dir/config/zellij"
+source "$__hopper_dir/lib/zellij.sh"

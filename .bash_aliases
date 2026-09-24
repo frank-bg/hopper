@@ -93,25 +93,8 @@ if [[ -n $DISPLAY ]]; then
     unset __kitty_repo_dir
 fi
 
-export ZELLIJ_CONFIG_DIR="${__hopper_dir}/config/zellij"
-
-# if zellij installed, remind to maybe use it
-if [[ -z "$ZELLIJ" ]] && command -v zellij &>/dev/null; then
-    echo ""
-    echo "💡💡💡 Tip: you have zellij installed, maybe you want to use it (ez) 💡💡💡"
-    echo ""
-    ez() {
-        # kick out other zellij clients so this terminal becomes the only attachment
-        for pid in $(pgrep -x zellij 2>/dev/null); do
-            [[ $pid -eq $$ ]] && continue
-            local cmdline
-            cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
-            [[ "$cmdline" == *"--server"* ]] && continue
-            kill "$pid" 2>/dev/null
-        done
-        exec zellij attach -c main
-    }
-fi
+# zellij config dir + `ez`
+source "${__hopper_dir}/lib/zellij.sh"
 
 # display script load time if >= 100ms or HOPPER_TIMING=1
 __hopper_load_end=$(date +%s%N)
