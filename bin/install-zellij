@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+INSTALL_DIR="$HOME/.local/bin"
+
+# detect architecture
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64)  TARGET="x86_64-unknown-linux-musl" ;;
+    aarch64) TARGET="aarch64-unknown-linux-musl" ;;
+    *)       echo "Unsupported architecture: $ARCH" && exit 1 ;;
+esac
+
+# get latest version from github
+echo "Fetching latest zellij version..."
+LATEST=$(curl -sf https://api.github.com/repos/zellij-org/zellij/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+
+if [[ -z "$LATEST" ]]; then
+    echo "Failed to fetch latest version" && exit 1
+fi
+
+echo "Latest: $LATEST"
+
+# show current version if already installed
+if command -v zellij &>/dev/null; then
+    CURRENT=$(zellij --version 2>/dev/null | awk '{print $2}')
+    echo "Current: v${CURRENT}"
+    if [[ "v${CURRENT}" == "$LATEST" ]]; then
+        echo "Already up to date."
+        exit 0
+    fi
+fi
+
+URL="https://github.com/zellij-org/zellij/releases/download/${LATEST}/zellij-${TARGET}.tar.gz"
+
+TMP_DIR=$(mktemp -d)
+trap "rm -rf $TMP_DIR" EXIT
+
+echo "Downloading..."
+curl -L --progress-bar "$URL" -o "$TMP_DIR/zellij.tar.gz"
+tar -xzf "$TMP_DIR/zellij.tar.gz" -C "$TMP_DIR"
+
+mkdir -p "$INSTALL_DIR"
+mv "$TMP_DIR/zellij" "$INSTALL_DIR/zellij"
+chmod +x "$INSTALL_DIR/zellij"
+
+echo "Installed to $INSTALL_DIR/zellij"

@@ -42,7 +42,9 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   (you are asked once)
 - **Terminal configs**: kitty (`~/.config/kitty` is symlinked here when a display is
   present; per-host settings go in `config/kitty/local.conf`, which is gitignored) and
-  zellij (`ZELLIJ_CONFIG_DIR`, with `ez` to attach to the `main` session)
+  zellij (`ZELLIJ_CONFIG_DIR`, with `ez` to attach to the `main` session).
+  `install-zellij` installs or updates zellij in `~/.local/bin` from its latest GitHub
+  release (Linux x86_64/aarch64; on macOS use `brew install zellij`)
 - **`sudo -A` without a TTY**: `SUDO_ASKPASS` points to `bin/sudo-askpass`, which
   shows a zenity dialog on Linux or an osascript one on macOS, and fails on headless
   hosts
