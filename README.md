@@ -48,7 +48,9 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   hosts
 
 Feature toggles are asked once per host and stored in global git config under
-`hopper.*`.
+`hopper.*`. One of them, `hopper.perRepoIdentity`, makes git identity per repo only:
+it sets `user.useConfigOnly` and removes any global `user.*`/`author.*`/`committer.*`
+on every shell start, so a repo without its own identity refuses to commit.
 
 ## Extending it: drop-ins
 

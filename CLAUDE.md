@@ -16,7 +16,9 @@ servers that are not mine. See README.md for what it does.
 - **Login is quiet.** Code that runs when the shell starts prints nothing unless it needs
   an answer (a one-time `__hopper_ask_flag`) or there is something to act on.
 - **Never overwrite user config.** A git setting is written only when it is unset (or
-  when it points at a file that no longer exists).
+  when it points at a file that no longer exists). The one exception is an opt-in
+  toggle that asks for it explicitly: `hopper.perRepoIdentity` strips any global
+  identity on every shell start.
 - Naming: functions and globals use the `__hopper_` / `__HOPPER_` prefix, and git config
   toggles live under `hopper.*`.
 
