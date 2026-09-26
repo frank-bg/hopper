@@ -1,5 +1,6 @@
 # shellcheck shell=bash
-# Show git status of watched repos at login. Cross-shell (bash + zsh).
+# Show git status of watched repos at login, but only the ones that need
+# attention: dirty, ahead or behind their upstream. Cross-shell (bash + zsh).
 # Requires: $__hopper_dir, compat.sh (_mtime/_sha256), emoji.sh.
 #
 # Which repos get checked (__hopper_check_repos, called by the entrypoint):
@@ -68,6 +69,13 @@ __HOPPER_REPO_STATUS() {
         # off the emoji is empty and the banner keeps a plain frame.
         (
             cd "$1" || exit
+            # a second porcelain line means a dirty tree; the ## header carries
+            # [ahead N, behind M]. Without an upstream only a dirty tree counts.
+            st=$(git status --porcelain -b 2>/dev/null) || exit
+            case "$st" in
+                *$'\n'* | *'[ahead '* | *'[behind '*) ;;
+                *) exit 0 ;;
+            esac
             __HOPPER_RANDOM_EMOJI 5 >/dev/null; left="${__HOPPER_EMOJI:-═════}"
             __HOPPER_RANDOM_EMOJI 5 >/dev/null; right="${__HOPPER_EMOJI:-═════}"
             echo "" && echo "$left $PWD $right" && git status -s -b
