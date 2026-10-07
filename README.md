@@ -38,9 +38,10 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   - `hpull` updates hopper
 - **Repo status at login**: `git status` for hopper, `~/projects/*` and any paths listed
   in `.repo_status_sources` (gitignored, one per line). It runs `git fetch` at most once
-  every 12 h per repo (with a `⇣ fetch <repo>…` line that is wiped once it finishes) and
-  checks each repo at most once an hour, showing it only when it is dirty, ahead or behind
-  its upstream
+  every 12 h per repo, all repos in parallel, behind a `⇣ fetch N/M…` line that is wiped
+  once they finish. The fetches never prompt: one that needs a passphrase the agent does not
+  hold fails, is reported, and the status falls back to the last fetch. Each repo is checked
+  at most once an hour and shown only when it is dirty, ahead or behind its upstream
 - **Composer**: optionally adds the global bin dir to the PATH and loads completion
   (you are asked once)
 - **Terminal configs**: kitty (`~/.config/kitty` is symlinked here when a display is
@@ -85,7 +86,8 @@ A drop-in is sourced in both bash and zsh, so write it for both. It can use:
 
 - `$__hopper_dropin_dir`, the directory of its resolved file, to find its own repo
 - `__hopper_ask_flag <key> <question>`, a y/n toggle stored in git config
-- `__HOPPER_REPO_STATUS <dir>`, to add its repo to the login status
+- `__HOPPER_REPO_STATUS <dir>`, to add its repo to the login status. During login it only
+  queues the repo; the status is printed with hopper's own after every drop-in has loaded
 - `_mtime` and `_sha256`, the GNU/BSD shims
 
 A link whose repo has been deleted is skipped silently. Deleting a private repo from a

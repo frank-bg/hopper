@@ -29,6 +29,10 @@ own setup and before `__hopper_check_repos`. It sets `$__hopper_dropin_dir` for 
 drop-in and skips dangling links. Treat this contract as a public API: other repos
 depend on it.
 
+`__HOPPER_REPO_STATUS <dir>` only queues while hopper loads; `__hopper_check_repos`
+adds hopper's repos, fetches the whole queue in parallel and prints it in queue order
+(drop-ins first). After login the same call checks the repo right away.
+
 ## Commits
 
 Format: `<type>(<scope>): <imperative description>`, with type one of feat, fix,
