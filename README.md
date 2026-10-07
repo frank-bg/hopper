@@ -38,8 +38,9 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   - `hpull` updates hopper
 - **Repo status at login**: `git status` for hopper, `~/projects/*` and any paths listed
   in `.repo_status_sources` (gitignored, one per line). It runs `git fetch` at most once
-  every 12 h per repo and checks each repo at most once an hour, showing it only when it
-  is dirty, ahead or behind its upstream
+  every 12 h per repo (with a `⇣ fetch <repo>…` line that is wiped once it finishes) and
+  checks each repo at most once an hour, showing it only when it is dirty, ahead or behind
+  its upstream
 - **Composer**: optionally adds the global bin dir to the PATH and loads completion
   (you are asked once)
 - **Terminal configs**: kitty (`~/.config/kitty` is symlinked here when a display is

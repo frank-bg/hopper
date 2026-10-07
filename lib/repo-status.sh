@@ -61,7 +61,15 @@ __HOPPER_REPO_STATUS() {
 
     if [[ -d $1 ]]; then
         if [[ -d $1/.git ]] && __HOPPER_DO_FETCH "$1"; then
+            # The fetch is the only slow step and clean repos print nothing, so
+            # without this the login looks hung. One line, wiped once it is done.
+            # The ~ goes through a variable: bash expands a literal one in the
+            # replacement back to $HOME.
+            local tilde='~' shown
+            shown=${1/#$HOME/$tilde}
+            [[ -t 1 ]] && printf '\r\033[K⇣ fetch %s…' "${shown%/}"
             ( cd "$1" && git fetch --quiet )
+            [[ -t 1 ]] && printf '\r\033[K'
         fi
         # Call directly and read $__HOPPER_EMOJI rather than capturing twice
         # with $(...): in zsh each subshell re-seeds $RANDOM identically, which
