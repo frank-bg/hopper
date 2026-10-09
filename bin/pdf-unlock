@@ -1,0 +1,217 @@
+#!/bin/bash
+# Remove the password from a PDF in place. The decrypted copy is written to a temp
+# file first, so a wrong password never touches the original.
+#   pdf-unlock [file.pdf]   without an argument, pick a PDF from the current directory
+set -u
+
+MAX_TRIES=3
+
+if ! command -v qpdf &>/dev/null; then
+    echo "qpdf is not installed." >&2
+    if [[ "$(uname -s)" == Darwin ]]; then
+        echo "  brew install qpdf" >&2
+    else
+        echo "  sudo apt install qpdf" >&2
+    fi
+    exit 1
+fi
+
+ACCENT=$'\033[38;5;141m'
+WHITE=$'\033[38;5;255m'
+GREY=$'\033[38;5;244m'
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+NC=$'\033[0m'
+
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+# ── Live search over OPT_LABEL[] (shown) / OPT_TEXT[] (lowercase, matched) ──
+# Type to filter · ↑↓ move · Enter picks · ⌫ deletes · Ctrl-U clears · Esc cancels.
+# Sets CHOICE to the picked index; returns 1 on cancel. Draws on stderr.
+SS_QUERY=""; SS_FILT=(); SS_CUR=0; SS_OFF=0; SS_VIEW=0; SS_TOTAL=0; SS_FIRST=1
+
+_ss_filter() {
+    local i q
+    q=$(lower "$SS_QUERY")
+    SS_FILT=()
+    for (( i = 0; i < SS_TOTAL; i++ )); do
+        [[ -z $q || ${OPT_TEXT[$i]} == *"$q"* ]] && SS_FILT+=("$i")
+    done
+    SS_CUR=0; SS_OFF=0
+}
+
+_ss_draw() {
+    local nf=${#SS_FILT[@]} i idx
+    (( SS_CUR < SS_OFF )) && SS_OFF=$SS_CUR
+    (( SS_CUR >= SS_OFF + SS_VIEW )) && SS_OFF=$(( SS_CUR - SS_VIEW + 1 ))
+    (( SS_OFF < 0 )) && SS_OFF=0
+    (( SS_FIRST == 0 )) && printf '\033[%dA' "$(( SS_VIEW + 2 ))"
+    SS_FIRST=0
+    printf "\033[K  ${ACCENT}search${NC} ${DIM}›${NC} ${WHITE}%s${NC}${ACCENT}▏${NC}\n" "$SS_QUERY"
+    for (( i = 0; i < SS_VIEW; i++ )); do
+        printf '\033[K'
+        idx=$(( SS_OFF + i ))
+        if (( idx >= nf )); then
+            printf '\n'
+        elif (( idx == SS_CUR )); then
+            printf "  ${ACCENT}▸${NC} ${BOLD}${WHITE}%s${NC}\n" "${OPT_LABEL[${SS_FILT[$idx]}]}"
+        else
+            printf "    ${GREY}%s${NC}\n" "${OPT_LABEL[${SS_FILT[$idx]}]}"
+        fi
+    done
+    printf "\033[K  ${DIM}%d/%d · ↑↓ move · Enter pick · Esc cancel${NC}\n" \
+        "$(( nf > 0 ? SS_CUR + 1 : 0 ))" "$nf"
+}
+
+# Wipe the list, leaving the prompt line with the outcome
+_ss_close() {
+    printf '\033[?25h\033[%dA\033[J' "$(( SS_VIEW + 2 ))"
+    trap - INT TERM
+}
+
+search_select() {
+    CHOICE=-1
+    SS_TOTAL=${#OPT_LABEL[@]}
+    (( SS_TOTAL == 0 )) && return 1
+
+    local i
+    if [[ ! -t 0 ]]; then   # no TTY: numbered list
+        for (( i = 0; i < SS_TOTAL; i++ )); do
+            printf "  ${ACCENT}%2d${NC}  %s\n" "$(( i + 1 ))" "${OPT_LABEL[$i]}"
+        done
+        printf "  pick [1-%d]: " "$SS_TOTAL"
+        local sel
+        read -r sel || return 1
+        [[ $sel =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= SS_TOTAL )) || { echo "Invalid choice"; return 1; }
+        CHOICE=$(( sel - 1 ))
+        return 0
+    fi
+
+    local rows
+    rows=$(tput lines 2>/dev/null || echo 24)
+    SS_VIEW=$(( rows - 8 ))
+    (( SS_VIEW < 5 )) && SS_VIEW=5
+    (( SS_VIEW > SS_TOTAL )) && SS_VIEW=$SS_TOTAL
+    SS_QUERY=""; SS_FIRST=1
+    _ss_filter
+
+    # bash 3.2 (macOS) takes no fractional read timeout
+    local esc_wait=0.05
+    (( BASH_VERSINFO[0] < 4 )) && esc_wait=1
+
+    printf '\033[?25l'
+    trap 'printf "\033[?25h"; exit 130' INT TERM
+    _ss_draw
+    local key k2
+    while true; do
+        IFS= read -rsn1 key
+        case "$key" in
+            $'\e')
+                read -rsn2 -t "$esc_wait" k2 2>/dev/null || k2=""
+                # Swallow the trailing '~' of ESC[1~ / ESC[4~ / ESC[3~ … so it is not typed
+                [[ $k2 == '['[0-9] ]] && read -rsn1 -t "$esc_wait" _ 2>/dev/null
+                case "$k2" in
+                    '[A') (( SS_CUR > 0 )) && (( SS_CUR-- )) ;;
+                    '[B') (( SS_CUR < ${#SS_FILT[@]} - 1 )) && (( SS_CUR++ )) ;;
+                    '[H'|'OH'|'[1') SS_CUR=0 ;;
+                    '[F'|'OF'|'[4') SS_CUR=$(( ${#SS_FILT[@]} - 1 )); (( SS_CUR < 0 )) && SS_CUR=0 ;;
+                    '') _ss_close; printf "  ${DIM}cancelled${NC}\n"; return 1 ;;
+                esac ;;
+            '') (( ${#SS_FILT[@]} == 0 )) && continue; CHOICE=${SS_FILT[$SS_CUR]}; break ;;   # Enter
+            $'\x7f'|$'\x08') SS_QUERY=${SS_QUERY%?}; _ss_filter ;;                            # backspace
+            $'\x15') SS_QUERY=""; _ss_filter ;;                                               # Ctrl-U
+            *) [[ $key == [[:print:]] ]] && { SS_QUERY+=$key; _ss_filter; } ;;
+        esac
+        _ss_draw
+    done
+    _ss_close
+    return 0
+}
+
+pick_file() {
+    local f mtime size width=0
+    PDFS=(); OPT_LABEL=(); OPT_TEXT=()
+    for f in *.pdf *.PDF; do
+        [[ -f "$f" ]] || continue
+        PDFS+=("$f")
+        (( ${#f} > width )) && width=${#f}
+    done
+    if (( ${#PDFS[@]} == 0 )); then
+        echo "No PDFs in $PWD"
+        return 1
+    fi
+    for f in "${PDFS[@]}"; do
+        mtime=$(date -r "$f" '+%Y-%m-%d %H:%M')
+        size=$(du -h "$f" | cut -f1)
+        OPT_LABEL+=("$(printf "%-${width}s  %s  %5s" "$f" "$mtime" "$size")")
+        OPT_TEXT+=("$(lower "$f")")
+    done
+    printf "  ${DIM}%d PDFs in %s · type to search${NC}\n" "${#PDFS[@]}" "$PWD"
+    search_select || return 1
+    file=${PDFS[$CHOICE]}
+    printf "  ${ACCENT}▸${NC} ${BOLD}%s${NC}\n" "$file"
+}
+
+if (( $# > 0 )); then
+    file=$1
+    [[ -f "$file" ]] || { echo "Not a file: $file" >&2; exit 1; }
+else
+    pick_file >&2 || exit 1
+fi
+
+# 0 = needs a password, 3 = encrypted but opens without one, 2 = not encrypted
+# (silent) or unreadable (qpdf complains)
+err=$(qpdf --requires-password "$file" 2>&1)
+rc=$?
+if (( rc == 2 )) && [[ -z "$err" ]]; then
+    echo "$file is not encrypted."
+    exit 0
+fi
+case $rc in
+    0) needs_password=1 ;;
+    3) needs_password=0 ;;
+    *) echo "$err" >&2; echo "Cannot read $file" >&2; exit 1 ;;
+esac
+
+# Same directory as the original, so the final mv is an atomic rename
+tmp=$(mktemp "$(dirname "$file")/.pdf-unlock.XXXXXX") || exit 1
+trap 'rm -f "$tmp"' EXIT
+
+# Returns 0 on success, 1 on a wrong password, 2 on any other error (already printed)
+decrypt() {
+    local err rc
+    # The password reaches qpdf on stdin: never on disk, never in ps
+    err=$(printf '%s\n' "$1" | qpdf --password-file=- --decrypt "$file" "$tmp" 2>&1)
+    rc=$?
+    # 3 = succeeded with warnings, the output is valid
+    (( rc == 0 || rc == 3 )) && return 0
+    [[ "$err" == *"invalid password"* ]] && return 1
+    echo "$err" >&2
+    return 2
+}
+
+untouched() { echo "$file left untouched." >&2; exit 1; }
+
+if (( needs_password )); then
+    ok=0
+    for (( try = 1; try <= MAX_TRIES; try++ )); do
+        IFS= read -r -s -p "Password for $file: " pass || { echo; untouched; }
+        echo
+        decrypt "$pass"
+        case $? in
+            0) ok=1; break ;;
+            1) echo "Wrong password ($try/$MAX_TRIES)" >&2 ;;
+            *) untouched ;;
+        esac
+    done
+    unset pass
+    (( ok )) || untouched
+else
+    decrypt "" || untouched
+fi
+
+# mktemp creates 0600: give the result the original's mode
+mode=$(stat -c %a "$file" 2>/dev/null || stat -f %Lp "$file")
+chmod "$mode" "$tmp"
+mv -f "$tmp" "$file" || exit 1
+echo "✓ $file decrypted"

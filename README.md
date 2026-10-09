@@ -52,6 +52,11 @@ To update, run `hpull` (it pulls and refreshes the submodule).
 - **`sudo -A` without a TTY**: `SUDO_ASKPASS` points to `bin/sudo-askpass`, which
   shows a zenity dialog on Linux or an osascript one on macOS, and fails on headless
   hosts
+- **`pdf-unlock [file.pdf]`** removes the password from a PDF in place (needs `qpdf`).
+  Without an argument it lists the PDFs in the current directory in a live search box
+  (type to filter, ↑↓ to move, Enter to pick, Esc to cancel). The password is read
+  without echo and handed to qpdf on stdin, and the result goes to a temp file that only
+  replaces the original once decryption succeeds, so a wrong password leaves it untouched
 
 Feature toggles are asked once per host and stored in global git config under
 `hopper.*`. One of them, `hopper.perRepoIdentity`, makes git identity per repo only:
