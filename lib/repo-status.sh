@@ -5,8 +5,10 @@
 #
 # Which repos get checked (__hopper_check_repos, called by the entrypoint):
 #   - always: hopper itself and ~/projects/*
-#   - per-host extras: one path per line in .repo_status_sources (# comments,
-#     leading ~ expanded). Gitignored, so each machine curates its own list.
+#   - per-host extras: one path or glob per line in .repo_status_sources
+#     (# comments, leading ~ expanded; a glob queues every match, and the ones
+#     that are not git repos are skipped). Gitignored, so each machine curates
+#     its own list.
 #   - drop-ins: call `__HOPPER_REPO_STATUS <dir>` for their own repos.
 #
 # During login every repo is only queued; __hopper_check_repos then fetches
@@ -166,6 +168,21 @@ __hopper_flush_repo_status() {
     done
 }
 
+# Queue every match of a glob from .repo_status_sources. The empty IFS keeps a
+# path with spaces whole in bash; zsh only globs a parameter expanded with
+# ${~...} and never splits it. A pattern with no match stays as is (bash; zsh
+# under the caller's no_nomatch), and __hopper_status_due drops it like any
+# path that is not a repo.
+__hopper_queue_glob() {
+    local IFS= match
+    if [ -n "$ZSH_VERSION" ]; then
+        # shellcheck disable=SC2296 # zsh-only expansion
+        for match in ${~1}; do __HOPPER_REPO_STATUS "$match"; done
+    else
+        for match in $1; do __HOPPER_REPO_STATUS "$match"; done
+    fi
+}
+
 __hopper_check_repos() {
     # zsh errors on a glob with no matches; keep that local to this function.
     [ -n "$ZSH_VERSION" ] && setopt local_options no_nomatch
@@ -176,10 +193,15 @@ __hopper_check_repos() {
     # per-host list
     local src="${__hopper_dir}/.repo_status_sources"
     if [[ -f $src ]]; then
-        local line
+        # not `path`: in zsh that is the array tied to $PATH
+        local line entry
         while read -r line; do
             case "$line" in '' | '#'*) continue ;; esac
-            __HOPPER_REPO_STATUS "${line/#\~/$HOME}"
+            entry=${line/#\~/$HOME}
+            case "$entry" in
+                *[*?[]*) __hopper_queue_glob "$entry" ;;
+                *) __HOPPER_REPO_STATUS "$entry" ;;
+            esac
         done < "$src"
     fi
 

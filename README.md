@@ -37,7 +37,8 @@ To update, run `hpull` (it pulls and refreshes the submodule).
   - `wttr`, `bye` and `..`
   - `hpull` updates hopper
 - **Repo status at login**: `git status` for hopper, `~/projects/*` and any paths listed
-  in `.repo_status_sources` (gitignored, one per line). It runs `git fetch` at most once
+  in `.repo_status_sources` (gitignored, one path or glob per line; a glob like
+  `~/work/*` watches every git repo it matches). It runs `git fetch` at most once
   every 12 h per repo, all repos in parallel, behind a `⇣ fetch N/M…` line that is wiped
   once they finish. The fetches never prompt: one that needs a passphrase the agent does not
   hold fails, is reported, and the status falls back to the last fetch. Each repo is checked
